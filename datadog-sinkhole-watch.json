@@ -1,0 +1,183 @@
+{
+  "created": "1745477260033",
+  "updated": "1745477260033",
+  "name": "datadog-sinkhole-watch",
+  "tags": [],
+  "services": [],
+  "domains": [],
+  "template": {
+    "displayName": "datadog-sinkhole-watch",
+    "trigger": {
+      "name": "trigger",
+      "valid": true,
+      "displayName": "Every Month",
+      "type": "TRIGGER",
+      "settings": {
+        "blockName": "@openops/block-schedule",
+        "blockVersion": "~0.1.5",
+        "blockType": "OFFICIAL",
+        "packageType": "REGISTRY",
+        "input": {
+          "timezone": "UTC",
+          "hour_of_the_day": 3,
+          "day_of_the_month": 1
+        },
+        "inputUiInfo": {
+          "customizedInputs": {}
+        },
+        "triggerName": "every_month"
+      },
+      "nextAction": {
+        "name": "step_1",
+        "type": "BLOCK",
+        "valid": true,
+        "settings": {
+          "input": {
+            "url": "https://api.datadoghq.com/api/v1/monitor",
+            "body": {},
+            "method": "GET",
+            "headers": {
+              "DD-API-KEY": "<your-datadog-api-key>",
+              "Content-Type": "application/json",
+              "DD-APPLICATION-KEY": "<your-datadog-app-key>"
+            },
+            "timeout": null,
+            "failsafe": false,
+            "body_type": "none",
+            "use_proxy": false,
+            "queryParams": {},
+            "proxy_settings": {}
+          },
+          "blockName": "@openops/block-http",
+          "blockType": "OFFICIAL",
+          "actionName": "send_request",
+          "inputUiInfo": {
+            "customizedInputs": {}
+          },
+          "packageType": "REGISTRY",
+          "blockVersion": "~0.5.1",
+          "errorHandlingOptions": {
+            "retryOnFailure": {
+              "value": false
+            },
+            "continueOnFailure": {
+              "value": false
+            }
+          }
+        },
+        "nextAction": {
+          "name": "step_2",
+          "type": "LOOP_ON_ITEMS",
+          "valid": true,
+          "settings": {
+            "items": "{{step2.body}}",
+            "inputUiInfo": {
+              "customizedInputs": {}
+            }
+          },
+          "nextAction": {
+            "name": "step_5",
+            "type": "BLOCK",
+            "valid": true,
+            "settings": {
+              "input": {},
+              "blockName": "@openops/block-end-flow",
+              "blockType": "OFFICIAL",
+              "actionName": "end_workflow",
+              "inputUiInfo": {
+                "customizedInputs": {}
+              },
+              "packageType": "REGISTRY",
+              "blockVersion": "~0.0.1",
+              "errorHandlingOptions": {
+                "retryOnFailure": {
+                  "value": false
+                },
+                "continueOnFailure": {
+                  "value": false
+                }
+              }
+            },
+            "displayName": "End Workflow"
+          },
+          "displayName": "Loop on Items",
+          "firstLoopAction": {
+            "name": "step_3",
+            "type": "CODE",
+            "valid": true,
+            "settings": {
+              "input": {
+                "monitorName": "{{item.name}}",
+                "lastTriggered": "{{item.overall_state_modified}}"
+              },
+              "sourceCode": {
+                "code": "export const code = async (inputs) => {\n  if (!inputs.lastTriggered) {\n    return `No alerts ever for: ${inputs.monitorName}`;\n  }\n\n  const lastTriggerDate = new Date(inputs.lastTriggered);\n  const now = new Date();\n  const diffDays = (now - lastTriggerDate) / (1000 * 60 * 60 * 24);\n\n  if (diffDays > 30) {\n    return `Inactive monitor: ${inputs.monitorName} — No alerts in ${Math.floor(diffDays)} days.`;\n  }\n\n  return null;\n};\n",
+                "packageJson": "{}"
+              },
+              "inputUiInfo": {
+                "customizedInputs": {}
+              },
+              "errorHandlingOptions": {
+                "retryOnFailure": {
+                  "value": false
+                },
+                "continueOnFailure": {
+                  "value": false
+                }
+              }
+            },
+            "nextAction": {
+              "name": "step_4",
+              "type": "BLOCK",
+              "valid": false,
+              "settings": {
+                "input": {
+                  "auth": null,
+                  "file": null,
+                  "text": {
+                    "text": "{{steps.4}}"
+                  },
+                  "blocks": {},
+                  "threadTs": null,
+                  "username": null,
+                  "headerText": {
+                    "headerText": null
+                  },
+                  "conversationId": null,
+                  "blockKitEnabled": false
+                },
+                "blockName": "@openops/block-slack",
+                "blockType": "OFFICIAL",
+                "actionName": "send_slack_message",
+                "inputUiInfo": {
+                  "customizedInputs": {}
+                },
+                "packageType": "REGISTRY",
+                "blockVersion": "~0.5.2",
+                "errorHandlingOptions": {
+                  "retryOnFailure": {
+                    "value": false
+                  },
+                  "continueOnFailure": {
+                    "value": false
+                  }
+                }
+              },
+              "displayName": "Send Message"
+            },
+            "displayName": "Custom TypeScript Code"
+          }
+        },
+        "displayName": "Send HTTP request"
+      }
+    },
+    "valid": false,
+    "description": ""
+  },
+  "blocks": [
+    "@openops/block-schedule",
+    "@openops/block-http",
+    "@openops/block-slack",
+    "@openops/block-end-flow"
+  ]
+}
